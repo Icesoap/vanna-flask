@@ -1,5 +1,5 @@
 flask
-#vanna[snowflake]
 vanna[chromadb,openai]
 db-dtypes
-python-dotenv`
+python-dotenv
+cx_Oracle

@@ -43,7 +43,7 @@ vn = MyVanna(config={'api_key': 'sk-Jm1DWJEnXOWCgPYSQkutT3BlbkFJtzSUa0GpCs62Ok38
 # 连接ChatGLM3
 # vn = MyVanna(config={'api_key': 'EMPTY', 'model': 'chatglm3-6b', 'base_url': 'http://127.0.0.1:8009/v1/'})
 
-engine = create_engine('oracle://iqms:iqms@192.168.110.73:1521/IQORA')
+engine = create_engine('oracle://iqms:iqms@192.168.110.74:1521/IQORA')
 
 
 # You define a function that takes in a SQL query as a string and returns a pandas dataframe

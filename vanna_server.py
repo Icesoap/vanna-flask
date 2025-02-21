@@ -22,6 +22,7 @@ import flask
 import os
 from cache import MemoryCache
 from vanna_entity.MyVanna import MyVanna
+from vanna_entity.MyVanna_Zhipu import MyVanna_ZhipuAI
 
 from sqlalchemy import create_engine
 
@@ -88,7 +89,16 @@ cache = MemoryCache()
 # 连接ChatGLM3
 # vn = MyVanna(config={'api_key': 'EMPTY', 'model': 'chatglm3-6b', 'base_url': 'http://127.0.0.1:8009/v1/'})
 # 连接本地Ollama_Deepseek
-vn = MyVanna(config={'api_key': 'EMPTY', 'model': 'deepseek-r1:8b', 'base_url': config_global['ai']['ollama']['base-url']})
+# vn = MyVanna(config={'api_key': 'ollama', 'model': 'deepseek-r1:8b', 'base_url': config_global['ai']['ollama']['base-url']})
+
+# #使用DeepSeek官网
+# vn = MyVanna(config={'api_key': 'sk-ee3afad6ea0a42c29d55bffe613394df', 'model': 'deepseek-chat', 'base_url': config_global['ai']['ollama']['base-url']})
+# vn = MyVanna(config={'api_key': 'sk-ee3afad6ea0a42c29d55bffe613394df', 'model': 'deepseek-reasoner', 'base_url': config_global['ai']['ollama']['base-url']})
+
+# 使用ChatGLM官网
+vn = MyVanna_ZhipuAI(config={'api_key': '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT',
+                                     'model': config_global['ai']['ollama']['chat']['model'], 'base_url': config_global['ai']['ollama']['base-url']})
+
 # vn = MyVanna(config={'api_key': 'ollama', 'model': 'deepseek-r1:8b', 'base_url': 'http://localhost:11434/v1/'})
 
 argv = sys.argv

@@ -195,13 +195,13 @@ def init_training_db():
     # 具体代码在E:\Development\conda_env\vanna_entity\Lib\site-packages\vanna_entity\base\base.py里
     # table_catalog对应mysql的def; table_schema对应mysql的库名
     df_information_schema = None
-    if db_type == '0':
+    if db_type == '2':
         df_information_schema = vn.run_sql("SELECT main.OWNER as table_catalog,main.OWNER as table_schema,main.* FROM all_tab_cols main where main.OWNER='IQMS'")
         vn.static_documentation = "This is a Oracle database"
-    elif db_type == '1' or db_type == '2':
-        vn.static_documentation = "This is a MySQL database"
-        if db_type == '2':
-            vn.static_documentation = "This is a MsSQL database"
+    elif db_type == '1' or db_type == '3':
+        vn.static_documentation = "This is a MsSQL database"
+        if db_type == '3':
+            vn.static_documentation = "This is a MySQL database"
         df_information_schema = vn.run_sql("SELECT * FROM INFORMATION_SCHEMA.COLUMNS")
 
     # 初始化SQLServer语句

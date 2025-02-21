@@ -46,6 +46,7 @@ from chromadb.api.types import (
     validate_embedding_function,
 )
 
+
 # import sys
 # print("sys.path:---------------------------------------")
 # print(sys.path)
@@ -56,6 +57,8 @@ from chromadb.api.types import (
 class MyVanna_ZhipuAI(ChromaDB_VectorStore, ZhipuAI_Chat):
 
     def __init__(self, config=None):
+        #修改chromadb_vanna路径
+        config['path'] = "./chromadb_vanna"
         ChromaDB_VectorStore.__init__(self, config=config)
         ZhipuAI_Chat.__init__(self, config=config)
         # OpenAI_Chat.__init__(self, config=config)
@@ -79,13 +82,13 @@ class MyVanna_ZhipuAI(ChromaDB_VectorStore, ZhipuAI_Chat):
             collection_get = self.ddl_collection.get(where_document={"$contains": ddl})
             return collection_get
 
-
     """
         重写ZhipuAI_Chat类的方法
         生成图表代码时,给提示中加入中文显示结果
     """
+
     def generate_plotly_code(
-        self, question: str = None, sql: str = None, df_metadata: str = None, **kwargs
+            self, question: str = None, sql: str = None, df_metadata: str = None, **kwargs
     ) -> str:
         if question is not None:
             system_msg = f"The following is a pandas DataFrame that contains the results of the query that answers the question the user asked: '{question}'"
@@ -109,5 +112,3 @@ class MyVanna_ZhipuAI(ChromaDB_VectorStore, ZhipuAI_Chat):
         plotly_code = self.submit_prompt(message_log, kwargs=kwargs)
 
         return self._sanitize_plotly_code(self._extract_python_code(plotly_code))
-
-

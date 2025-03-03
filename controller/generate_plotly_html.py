@@ -1,6 +1,3 @@
-
-
-
 import json
 # pip install pymssql
 
@@ -16,7 +13,7 @@ from vanna_entity.MyVanna import MyVanna
 import yaml
 from vanna_entity.MyVanna_Zhipu import MyVanna_ZhipuAI
 
-from constant.sql_constant import DEFAULT_DB_TYPE, DB_TYPE, DB_STR, DB_DOCUMENTATION
+from constant.sql_constant import DEFAULT_DB_TYPE, DB_TYPE, DB_STR, DB_DOCUMENTATION, DB_DIALECT
 
 from entity.logging import logger
 
@@ -136,7 +133,7 @@ def query_for_chart_html() -> jsonify:
 
         # 使用ChatGLM官网
         # vn = MyVanna_ZhipuAI(config={'api_key': '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT', 'model': 'glm-4', 'base_url': config_global['ai']['ollama']['base-url']})
-        vn = MyVanna_ZhipuAI(config={'api_key': '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT',
+        vn = MyVanna_ZhipuAI(config={'api_key': '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT', 'dialect': DB_DIALECT[db_type],
                                      'model': config_global['ai']['ollama']['chat']['model'], 'base_url': config_global['ai']['ollama']['base-url']})
 
         # vn = VannaChromaDBOpenai(config={'api_key': 'sk-ee3afad6ea0a42c29d55bffe613394df', 'model': 'gpt-3.5-turbo'

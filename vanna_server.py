@@ -30,6 +30,8 @@ from controller.generate_plotly_html import query_for_chart_html
 
 import cx_Oracle
 
+from constant.sql_constant import DB_DIALECT
+
 # 获取yaml文件路径
 yamlPath = 'config.yml'
 config_global = None
@@ -96,8 +98,8 @@ cache = MemoryCache()
 # vn = MyVanna(config={'api_key': 'sk-ee3afad6ea0a42c29d55bffe613394df', 'model': 'deepseek-reasoner', 'base_url': config_global['ai']['ollama']['base-url']})
 
 # 使用ChatGLM官网
-vn = MyVanna_ZhipuAI(config={'api_key': '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT',
-                                     'model': config_global['ai']['ollama']['chat']['model'], 'base_url': config_global['ai']['ollama']['base-url']})
+vn = MyVanna_ZhipuAI(config={'api_key': '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT', 'dialect': DB_DIALECT[1],
+                             'model': config_global['ai']['ollama']['chat']['model'], 'base_url': config_global['ai']['ollama']['base-url']})
 
 # vn = MyVanna(config={'api_key': 'ollama', 'model': 'deepseek-r1:8b', 'base_url': 'http://localhost:11434/v1/'})
 
@@ -185,7 +187,7 @@ vn.static_documentation = "This is a Oracle database"
 # 自己添加的方法,初始化数据库训练
 @app.route('/api/init_training_db', methods=['GET', 'POST'])
 def init_training_db():
-    # db_type 数据库类型,0:oracle,1:mssql,2:mssql
+    # db_type 数据库类型,1:mssql,2:oracle,3:mssql
     db_type = flask.request.args.get('db_type')
 
     # -------------------------------核心库初始化训练-------------------------------
@@ -558,7 +560,7 @@ def root():
 
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5001)
+    app.run(debug=False, host='0.0.0.0', port=5002)
 
 # if __name__ == '__main__':
 #     server = pywsgi.WSGIServer(('127.0.0.1', 5001), app)

@@ -2,17 +2,26 @@ path:
   cx_oracle: "E:\\Development\\PremiumSoft\\Navicat Premium 15\\instantclient_11_2"
 #数据库连接字符串
 db_str:
+  local: "mssql+pymssql://sa:123456@PC-202205240905:1433/Sportsoul-PDM"
 #  local: "mssql+pymssql://sa:Sensnow2022@120.46.91.216:1433/ismartMemberService"
-  local: "oracle://iqms:iqms@192.168.110.74:1521/IQORA"
+#  local: "oracle://iqms:iqms@192.168.110.74:1521/IQORA"
 
 ai:
   ollama:
 #    base-url: 'http://localhost:11434/v1/'
 #    base-url: 'https://api.deepseek.com/v1'
-    base-url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+#    base-url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+
+    base-url: 'https://u192916-b442-a0bd23d2.westx.seetacloud.com:8443/ds/v1'
     chat:
-      model: 'glm-4-airx'
+#      model: 'glm-4-air-0111 Preview'
+#      model: 'glm-4-plus'
+      model: deepseek-coder-v2:16b
+#      model: deepseek-r1:14b
+#
+#      model: 'glm-4-airx'
 #      model: 'glm-4-air'
 #      model: deepseek-r1:8b
+
       options:
         temperature: 0.7

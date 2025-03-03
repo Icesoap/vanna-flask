@@ -13,6 +13,12 @@ DB_TYPE = {
     3: "mysql"
 }
 
+DB_DIALECT = {
+    1: "mssql",
+    2: "oracle",
+    3: "mysql"
+}
+
 DEFAULT_DB_TYPE = "0"
 
 DB_DOCUMENTATION = {

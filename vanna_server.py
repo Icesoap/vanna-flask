@@ -11,7 +11,6 @@ import sys
 import yaml
 
 type = sys.getfilesystemencoding()
-
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,14 +22,14 @@ import os
 from cache import MemoryCache
 from vanna_entity.MyVanna import MyVanna
 from vanna_entity.MyVanna_Zhipu import MyVanna_ZhipuAI
-
 from sqlalchemy import create_engine
-
 from controller.generate_plotly_html import query_for_chart_html
-
 import cx_Oracle
-
 from constant.sql_constant import DB_DIALECT
+from services.sqlite_service import SqliteService
+from entity.logging import logger
+
+from constant.sql_constant import DEFAULT_DB_TYPE, DB_TYPE, DB_STR, DB_DOCUMENTATION, DB_DIALECT
 
 # 获取yaml文件路径
 yamlPath = 'config.yml'
@@ -98,8 +97,27 @@ cache = MemoryCache()
 # vn = MyVanna(config={'api_key': 'sk-ee3afad6ea0a42c29d55bffe613394df', 'model': 'deepseek-reasoner', 'base_url': config_global['ai']['ollama']['base-url']})
 
 # 使用ChatGLM官网
-vn = MyVanna_ZhipuAI(config={'api_key': '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT', 'dialect': DB_DIALECT[1],
-                             'model': config_global['ai']['ollama']['chat']['model'], 'base_url': config_global['ai']['ollama']['base-url']})
+# vn = MyVanna_ZhipuAI(config={'api_key': '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT', 'dialect': DB_DIALECT[1],
+#                              'model': config_global['ai']['ollama']['chat']['model'], 'base_url': config_global['ai']['ollama']['base-url']})
+
+# vn = MyVanna_ZhipuAI(api_key='ollama', base_url=config_global['ai']['ollama']['base-url']
+#                      , model=config_global['ai']['ollama']['chat']['model'], dialect=DB_DIALECT[2], create_vector=False
+#                      , db_type=2, db_name='IQORA')
+
+# vn = MyVanna_ZhipuAI(api_key='ollama', base_url=config_global['ai']['ollama']['base-url']
+#                      , model=config_global['ai']['ollama']['chat']['model'], dialect=DB_DIALECT[1], create_vector=True
+#                      , db_type=1, db_name='SRC')
+
+# 测试火山引擎 ds
+# vn = MyVanna_ZhipuAI(api_key=config_global['ai']['models']['deepseek-v3-250324']['api_key'], base_url=config_global['ai']['ollama']['base-url']
+#                      , model=config_global['ai']['ollama']['chat']['model'], dialect=DB_DIALECT[1], create_vector=False
+#                      , db_type=1, db_name='SRC')
+
+# 测试qwen3
+vn = MyVanna_ZhipuAI(api_key=config_global['ai']['models']['qwen3:14b']['api_key'], base_url=config_global['ai']['ollama']['base-url']
+                     , model=config_global['ai']['ollama']['chat']['model'], dialect=DB_DIALECT[1], create_vector=False
+                     , db_type=1, db_name='SRC')
+
 
 # vn = MyVanna(config={'api_key': 'ollama', 'model': 'deepseek-r1:8b', 'base_url': 'http://localhost:11434/v1/'})
 
@@ -116,7 +134,11 @@ db_str = config_global["db_str"]["local"]
 
 # oracle
 # engine = create_engine('oracle://iqms:iqms@192.168.110.254:1521/IQORA')
-engine = create_engine(db_str)
+pwd='2660000532-83096695!@#$%'
+engine = create_engine(f'mssql+pymssql://sa:{urlquote(pwd)}@117.78.49.23:1604/SRC')
+# db_url_final = f"{db_type_result}://{uid}:{urlquote(pwd)}@{server}:{port}/{database}"
+
+# engine = create_engine(db_str)
 
 userName = 'root'
 password = 'a@12345'
@@ -280,6 +302,142 @@ def generate_sql():
         })
 
 
+@app.route('/api/generate_sql_custom', methods=['POST'])
+def generate_sql_custom():
+    api_response = ApiResponse(500, "请求出错")
+    try:
+
+        input_json = flask.request.get_json()
+
+        print(f'{datetime.datetime.now()}:{input_json}')
+
+        if input_json is None or len(input_json) <= 0:
+            api_response.set_error("请输入参数")
+            return jsonify(api_response.__dict__)
+
+        question = input_json['question'] if 'question' in input_json else None
+        # ex:{"type":0,"uid":"IQMS","pwd":"iqms","server":"192.168.110.74","port":"1521","database":"IQORA"}
+        db_url = input_json['db_url'] if "db_url" in input_json else None
+        model_name = input_json['model_name'] if "model_name" in input_json else None
+        # db_desc = input_json['db_desc'] if "db_desc" in input_json else None
+        if question is None or len(question) <= 0:
+            api_response.set_error("请输入要查询的问题")
+            return jsonify(api_response.__dict__)
+        if db_url is None or len(db_url) <= 0:
+            api_response.set_error("请输入要链接的数据库链接字符串")
+            return jsonify(api_response.__dict__)
+        if model_name is None or len(model_name) <= 0:
+            api_response.set_error("请输入大模型的名称")
+            return jsonify(api_response.__dict__)
+        # if db_desc is None or len(db_desc) <= 0:
+        #     api_response.set_error("请输入数据库类型描述")
+        #     return jsonify(api_response.__dict__)
+
+        # db_url_json = json.loads(db_url)
+        # db_type = db_url_json['type']
+        # server = db_url_json['server']
+        # port = db_url_json['port']
+        # database = db_url_json['database']
+        # uid = db_url_json['uid']
+        # pwd = db_url_json['pwd']
+
+        # db_url_json = json.loads(db_url)
+        db_type = db_url['type']
+        server = db_url['server']
+        port = db_url['port']
+        database = db_url['database']
+        uid = db_url['uid']
+        pwd = db_url['pwd']
+
+        if db_type is None:
+            api_response.set_error("请输入数据库类型")
+            return jsonify(api_response.__dict__)
+        if server is None or len(server) <= 0:
+            api_response.set_error("请输入数据库地址")
+            return jsonify(api_response.__dict__)
+        if port is None or len(port) <= 0:
+            api_response.set_error("请输入数据库端口号")
+            return jsonify(api_response.__dict__)
+        if database is None or len(database) <= 0:
+            api_response.set_error("请输入数据库名称")
+            return jsonify(api_response.__dict__)
+        if uid is None or len(uid) <= 0:
+            api_response.set_error("请输入数据库登录名")
+            return jsonify(api_response.__dict__)
+        if pwd is None or len(pwd) <= 0:
+            api_response.set_error("请输入数据库密码")
+            return jsonify(api_response.__dict__)
+
+        # 获取yaml文件路径
+        yamlPath = 'config.yml'
+        config_global = None
+        cx_oracle_path = ""
+
+        try:
+            with open(yamlPath, 'rb') as f:
+                # yaml文件通过---分节，多个节组合成一个列表
+                # data = yaml.safe_load_all(f)
+                config_global = yaml.load(f.read(), Loader=yaml.FullLoader)
+                # print(result, type(result))
+                # print(result['path'], type(result['path']))
+
+                cx_oracle_path = config_global['path']['cx_oracle']
+        except Exception as e:
+            print('config.yml not found')
+            print(e)
+
+        vn = MyVanna_ZhipuAI(api_key=config_global['ai']['models'][model_name]['api_key']
+                             , base_url=config_global['ai']['models'][model_name]['base-url']
+                             , model=config_global['ai']['models'][model_name]['model'], dialect=DB_DIALECT[db_type]
+                             , create_vector=False, db_type=db_type, db_name=database)
+
+        vn.run_sql = vn.run_sql
+        vn.run_sql_is_set = True
+
+        vn.static_documentation = DB_DOCUMENTATION[db_type]
+
+        # if db_desc is not None:
+        #     vn.static_documentation = db_desc
+        # else:
+        #     vn.static_documentation = "This is a Oracle database"
+
+        db_type_result = DB_TYPE[db_type]
+        # db_url_final = f"{db_type_result}://{uid}:{pwd}@{server}:{port}/{database}"
+        db_url_final = f"{db_type_result}://{uid}:{urlquote(pwd)}@{server}:{port}/{database}"
+        engine = create_engine(db_url_final)
+
+        # 生成sql
+        sql = vn.generate_sql(question=question, db_type=db_type)
+
+        api_response.set_success("请求成功", None, sql)
+
+        # question = flask.request.args.get('question')
+        #
+        # if question is None:
+        #     return jsonify({"type": "error", "error": "No question provided"})
+        #
+        # id = cache.generate_id(question=question)
+        # sql = vn.generate_sql(question=question)
+        #
+        # cache.set(id=id, field='question', value=question)
+        # cache.set(id=id, field='sql', value=sql)
+
+    except Exception as e:
+        print(e.__str__())
+        logger.error(e)
+        return e.__str__(), 500, {'Content-Type': 'text/plain'}
+        api_response.set_error(e.__str__())
+
+    return api_response.__dict__
+
+    # return jsonify(
+    #     {
+    #         "type": "sql",
+    #         "id": id,
+    #         "text": sql,
+    #     })
+
+
 @app.route('/api/v0/run_sql', methods=['GET'])
 @requires_cache(['sql'])
 def run_sql(id: str, sql: str):
@@ -409,12 +567,53 @@ def remove_training_data():
         return jsonify({"type": "error", "error": "Couldn't remove training data"})
 
 
+"""
+原始训练方法
+"""
+# @app.route('/api/v0/train', methods=['POST'])
+# def add_training_data():
+#     question = flask.request.json.get('question')
+#     sql = flask.request.json.get('sql')
+#     ddl = flask.request.json.get('ddl')
+#     documentation = flask.request.json.get('documentation')
+#
+#     try:
+#         id = vn.train(question=question, sql=sql, ddl=ddl, documentation=documentation)
+#
+#         return jsonify({"id": id})
+#     except Exception as e:
+#         print("TRAINING ERROR", e)
+#         return jsonify({"type": "error", "error": str(e)})
+
+
+"""
+训练方法-自定义
+"""
+
+
 @app.route('/api/v0/train', methods=['POST'])
 def add_training_data():
     question = flask.request.json.get('question')
     sql = flask.request.json.get('sql')
     ddl = flask.request.json.get('ddl')
     documentation = flask.request.json.get('documentation')
+    db_type = flask.request.json.get('db_type')
+    db_name = flask.request.json.get('db_name')
+    # if not db_name or not db_type:
+    #     return jsonify({"type": "error", "error": "Place check the parameter interface"})
+    # vn = MyVanna(db_type=db_type, create_vector=False, db_name=db_name)
+    sqlite_server = None
+    try:
+        if documentation:
+            sqlite_server = SqliteService()
+            _key, _value = documentation.split("是")[0], documentation.split("是")[-1]
+            sqlite_server.insert_or_update_data({"key": _key, "value": _value, "database_type": 2})
+            sqlite_server.close()
+    except Exception as e:
+        logger.error(f"【add_training_data】 error: {e}")
+    finally:
+        if sqlite_server is not None:
+            sqlite_server.close()
 
     try:
         id = vn.train(question=question, sql=sql, ddl=ddl, documentation=documentation)
@@ -443,11 +642,12 @@ def add_training_data_custom():
     - 如果训练数据添加成功，返回一个包含训练数据唯一标识符（id）的JSON对象。
     - 如果添加过程中出现错误，返回一个包含错误信息的JSON对象。
     """
-
     api_response = ApiResponse(500, "请求出错")
 
     input_json = flask.request.get_json()
+
     print(f'{datetime.datetime.now()}--add_training_data_input_json:{input_json}')
+    logger.info(f'add_training_data_custom-input_json:{input_json}')
     if input_json is None or len(input_json) <= 0:
         api_response.set_error("请输入参数")
         return api_response.json()
@@ -457,14 +657,25 @@ def add_training_data_custom():
     sql = input_json['sql'] if 'sql' in input_json else None
     ddl = input_json['ddl'] if 'ddl' in input_json else None
     documentation = input_json['documentation'] if 'documentation' in input_json else None
+    db_type = input_json.get('db_type')
+    db_name = input_json.get('db_name')
+    # if not db_name or not db_type:
+    #     return jsonify({"type": "error", "error": "Place check the parameter interface"})
+    # vn = MyVanna(db_type=db_type, create_vector=False, db_name=db_name)
+    vn = MyVanna_ZhipuAI(api_key='ollama', base_url=config_global['ai']['ollama']['base-url']
+                         , model=config_global['ai']['ollama']['chat']['model'], dialect=DB_DIALECT[1], create_vector=False
+                         , db_type=1, db_name='SRC')
+    # vn = MyVanna_ZhipuAI(api_key='6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT', base_url=config_global['ai']['ollama']['base-url']
+    #                      , model=config_global['ai']['ollama']['chat']['model'], dialect=DB_DIALECT[2], create_vector=True
+    #                      , db_type=2, db_name='IQORA')
 
     if question and not sql:
         api_response.set_error("输入了question必须有对应的sql语句")
-        return api_response.json()
+        return api_response.__dict__
 
     if documentation is None and sql is None and ddl is None:
         api_response.set_error("请至少输入要训练的sql或documentation或ddl中的一个")
-        return api_response.json()
+        return api_response.__dict__
 
     # 从请求体中获取训练数据的四个部分
     # question = flask.request.json.get('question')
@@ -478,16 +689,28 @@ def add_training_data_custom():
         # print(collection_query)
         # return
 
-        '''
-        测试用户
-        '''
-
-        training_data_single = vn.get_single_training_data_custom(question=question, sql=sql, ddl=ddl, documentation=documentation)
+        training_data_single = vn.get_single_training_data_custom(question=question, sql=sql, ddl=ddl,
+                                                                  documentation=documentation)
 
         single_ids = training_data_single["ids"]
         if len(single_ids) > 0:
-            api_response.set_success(f"已存在id为{single_ids}的训练数据")
-            return api_response.model_dump_json()
+            api_response.set_error(f"已存在id为{single_ids}的训练数据")
+            return api_response.__dict__
+
+        sqlite_server = None
+        try:
+            sqlite_server = SqliteService()
+            if documentation:
+                _key, _value = documentation.split("是")[0], documentation.split("是")[-1]
+                sqlite_server.insert_or_update_data({"key": _key, "value": _value, "database_type": db_type})
+            if question and sql:
+                sqlite_server.insert_or_update_data({"key": question, "value": sql, "database_type": db_type})
+            sqlite_server.close()
+        except Exception as e:
+            logger.error(f"【add_training_data_custom】 error: {e}")
+        finally:
+            if sqlite_server is not None:
+                sqlite_server.close()
 
         # 尝试使用提供的训练数据进行训练，并获取训练的唯一标识符
         id = vn.train(question=question, sql=sql, ddl=ddl, documentation=documentation)
@@ -502,7 +725,87 @@ def add_training_data_custom():
         print("TRAINING ERROR", e)
         api_response.set_error(f"添加训练数据失败,{e.__str__()}")
         # return jsonify({"type": "error", "error": str(e)})
-    return api_response.json()
+    return api_response.__dict__
+
+
+# @app.route('/api/add_training', methods=['POST'])
+# def add_training_data_custom():
+#     """
+#     向系统添加自定义的训练数据。
+#
+#     接收POST请求，请求体中包含训练数据的四个关键部分：问题（question）、
+#     结构化查询语言（SQL）、数据定义语言（DDL）和文档说明（documentation）。
+#
+#     参数:
+#     - question: 训练数据中的问题部分，字符串类型。
+#     - sql: 对应于问题的结构化查询语言，字符串类型。
+#     - ddl: 数据定义语言，用于定义数据结构，字符串类型。
+#     - documentation: 对训练数据的文档说明，字符串类型。
+#
+#     返回值:
+#     - 如果训练数据添加成功，返回一个包含训练数据唯一标识符（id）的JSON对象。
+#     - 如果添加过程中出现错误，返回一个包含错误信息的JSON对象。
+#     """
+#
+#     api_response = ApiResponse(500, "请求出错")
+#
+#     input_json = flask.request.get_json()
+#     print(f'{datetime.datetime.now()}--add_training_data_input_json:{input_json}')
+#     if input_json is None or len(input_json) <= 0:
+#         api_response.set_error("请输入参数")
+#         return api_response.json()
+#
+#     # 从请求体中获取训练数据的四个部分
+#     question = input_json['question'] if 'question' in input_json else None
+#     sql = input_json['sql'] if 'sql' in input_json else None
+#     ddl = input_json['ddl'] if 'ddl' in input_json else None
+#     documentation = input_json['documentation'] if 'documentation' in input_json else None
+#
+#     if question and not sql:
+#         api_response.set_error("输入了question必须有对应的sql语句")
+#         return api_response.json()
+#
+#     if documentation is None and sql is None and ddl is None:
+#         api_response.set_error("请至少输入要训练的sql或documentation或ddl中的一个")
+#         return api_response.json()
+#
+#     # 从请求体中获取训练数据的四个部分
+#     # question = flask.request.json.get('question')
+#     # sql = flask.request.json.get('sql')
+#     # ddl = flask.request.json.get('ddl')
+#     # documentation = flask.request.json.get('documentation')
+#
+#     try:
+#
+#         # collection_query = vn.sql_collection.query(query_texts=[question], n_results=50)
+#         # print(collection_query)
+#         # return
+#
+#         '''
+#         测试用户
+#         '''
+#
+#         training_data_single = vn.get_single_training_data_custom(question=question, sql=sql, ddl=ddl, documentation=documentation)
+#
+#         single_ids = training_data_single["ids"]
+#         if len(single_ids) > 0:
+#             api_response.set_success(f"已存在id为{single_ids}的训练数据")
+#             return api_response.model_dump_json()
+#
+#         # 尝试使用提供的训练数据进行训练，并获取训练的唯一标识符
+#         id = vn.train(question=question, sql=sql, ddl=ddl, documentation=documentation)
+#
+#         data = {"id": id}
+#         api_response.set_success("添加训练数据成功", data)
+#         # return api_response.json()
+#         # 返回训练的唯一标识符
+#         # return jsonify({"id": id})
+#     except Exception as e:
+#         # 如果训练过程中出现异常，打印错误信息，并返回错误信息
+#         print("TRAINING ERROR", e)
+#         api_response.set_error(f"添加训练数据失败,{e.__str__()}")
+#         # return jsonify({"type": "error", "error": str(e)})
+#     return api_response.json()
 
 
 @app.route('/api/v0/generate_followup_questions', methods=['GET'])

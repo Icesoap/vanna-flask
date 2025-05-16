@@ -51,6 +51,8 @@ def query_for_chart_html() -> jsonify:
         input_json = flask.request.get_json()
 
         print(f'{datetime.datetime.now()}:{input_json}')
+        logger.info(f'{datetime.datetime.now()}:{input_json}')
+
 
         if input_json is None or len(input_json) <= 0:
             api_response.set_error("请输入参数")
@@ -59,12 +61,16 @@ def query_for_chart_html() -> jsonify:
         question = input_json['question'] if 'question' in input_json else None
         # ex:{"type":0,"uid":"IQMS","pwd":"iqms","server":"192.168.110.74","port":"1521","database":"IQORA"}
         db_url = input_json['db_url'] if "db_url" in input_json else None
+        model_name = input_json['model_name'] if "model_name" in input_json else None
         # db_desc = input_json['db_desc'] if "db_desc" in input_json else None
         if question is None or len(question) <= 0:
             api_response.set_error("请输入要查询的问题")
             return jsonify(api_response.__dict__)
         if db_url is None or len(db_url) <= 0:
             api_response.set_error("请输入要链接的数据库链接字符串")
+            return jsonify(api_response.__dict__)
+        if model_name is None or len(model_name) <= 0:
+            api_response.set_error("请输入大模型的名称")
             return jsonify(api_response.__dict__)
         # if db_desc is None or len(db_desc) <= 0:
         #     api_response.set_error("请输入数据库类型描述")
@@ -122,6 +128,8 @@ def query_for_chart_html() -> jsonify:
         except Exception as e:
             print('config.yml not found')
             print(e)
+            logger.error('config.yml not found')
+            logger.error(e)
 
         # return jsonify({"code": "test"})
 
@@ -133,8 +141,16 @@ def query_for_chart_html() -> jsonify:
 
         # 使用ChatGLM官网
         # vn = MyVanna_ZhipuAI(config={'api_key': '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT', 'model': 'glm-4', 'base_url': config_global['ai']['ollama']['base-url']})
-        vn = MyVanna_ZhipuAI(config={'api_key': '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT', 'dialect': DB_DIALECT[db_type],
-                                     'model': config_global['ai']['ollama']['chat']['model'], 'base_url': config_global['ai']['ollama']['base-url']})
+        # vn = MyVanna_ZhipuAI(api_key='6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT', base_url=config_global['ai']['ollama']['base-url']
+        #                      , model=config_global['ai']['ollama']['chat']['model'], dialect=DB_DIALECT[db_type]
+        #                      ,create_vector=False,db_type=db_type,db_name=database)
+
+        vn = MyVanna_ZhipuAI(api_key=config_global['ai']['models'][model_name]['api_key']
+                             , base_url=config_global['ai']['models'][model_name]['base-url']
+                             , model=config_global['ai']['models'][model_name]['model'], dialect=DB_DIALECT[db_type]
+                             , create_vector=False, db_type=db_type, db_name=database)
+        # config={'api_key': '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT', 'dialect': DB_DIALECT[db_type],
+        #         'model': config_global['ai']['ollama']['chat']['model'], 'base_url': config_global['ai']['ollama']['base-url']})
 
         # vn = VannaChromaDBOpenai(config={'api_key': 'sk-ee3afad6ea0a42c29d55bffe613394df', 'model': 'gpt-3.5-turbo'
         #                                  # , 'path': 'E:\\work-space\\demo-workspace\\github\\fork\\vanna_entity\\chroma.sqlite3'
@@ -167,7 +183,7 @@ def query_for_chart_html() -> jsonify:
         # engine = create_engine('oracle://iqms:iqms@192.168.110.73:1521/IQORA')
 
         # 生成sql
-        sql = vn.generate_sql(question=question)
+        sql = vn.generate_sql(question=question, db_type=db_type)
         # 执行sql取数据
         df = vn.run_sql(sql=sql, db=engine)
         code = vn.generate_plotly_code(question=question, sql=sql, df_metadata=f"Running df.dtypes gives:\n {df.dtypes}")

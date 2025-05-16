@@ -8,8 +8,8 @@ import flask
 import os
 from cache import MemoryCache
 
-from vanna_entity.openai.openai_chat import OpenAI_Chat
-from vanna_entity.chromadb.chromadb_vector import ChromaDB_VectorStore
+from vanna.openai.openai_chat import OpenAI_Chat
+from vanna.chromadb.chromadb_vector import ChromaDB_VectorStore
 
 from sqlalchemy import create_engine
 
@@ -25,10 +25,10 @@ app = Flask(__name__, static_url_path='')
 cache = MemoryCache()
 
 
-# from vanna_entity.local import LocalContext_OpenAI
+# from vanna.local import LocalContext_OpenAI
 # vn = LocalContext_OpenAI()
 
-# from vanna_entity.remote import VannaDefault
+# from vanna.remote import VannaDefault
 # vn = VannaDefault(model=os.environ['VANNA_MODEL'], api_key=os.environ['VANNA_API_KEY'])
 
 class MyVanna(ChromaDB_VectorStore, OpenAI_Chat):
@@ -38,12 +38,12 @@ class MyVanna(ChromaDB_VectorStore, OpenAI_Chat):
 
 
 vn = MyVanna(config={'api_key': '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', 'model': 'gpt-3.5-turbo'
-                     # , 'path': 'E:\\work-space\\demo-workspace\\github\\fork\\vanna_entity\\chroma.sqlite3'
+                     # , 'path': 'E:\\work-space\\demo-workspace\\github\\fork\\vanna\\chroma.sqlite3'
                      })
 # 连接ChatGLM3
 # vn = MyVanna(config={'api_key': 'EMPTY', 'model': 'chatglm3-6b', 'base_url': 'http://127.0.0.1:8009/v1/'})
 
-engine = create_engine('oracle://iqms:iqms@192.168.110.74:1521/IQORA')
+engine = create_engine('oracle://iqms:iqms@192.168.110.73:1521/IQORA')
 
 
 # You define a function that takes in a SQL query as a string and returns a pandas dataframe
@@ -63,8 +63,8 @@ vn.static_documentation = "This is a Oracle database"
 # # -------------------------------核心库初始化训练-------------------------------
 # #training
 # #The information schema query may need some tweaking depending on your database. This is a good starting point.
-# #vanna原生不支持oracle 这里改造代码 使oracle可以匹配 vanna_entity
-# #具体代码在E:\Development\conda_env\vanna_entity\Lib\site-packages\vanna_entity\base\base.py里
+# #vanna原生不支持oracle 这里改造代码 使oracle可以匹配 vanna
+# #具体代码在E:\Development\conda_env\vanna\Lib\site-packages\vanna\base\base.py里
 # #table_catalog对应mysql的def; table_schema对应mysql的库名
 # df_information_schema = vn.run_sql("SELECT main.OWNER as table_catalog,main.OWNER as table_schema,main.* FROM all_tab_cols main where main.OWNER='IQMS'")
 #

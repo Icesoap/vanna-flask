@@ -1,74 +1,86 @@
-# from vanna.openai.openai_chat import OpenAI_Chat
-from vanna_model.openai.openai_chat_override import OpenAI_Chat
+from vanna.openai.openai_chat import OpenAI_Chat
 from vanna.chromadb.chromadb_vector import ChromaDB_VectorStore
-from vanna.ZhipuAI import ZhipuAI_Chat
-
-from chromadb.api.types import (
-    URI,
-    CollectionMetadata,
-    DataLoader,
-    Embedding,
-    Embeddings,
-    Embeddable,
-    Include,
-    Loadable,
-    Metadata,
-    Metadatas,
-    Document,
-    Documents,
-    Image,
-    Images,
-    URIs,
-    Where,
-    IDs,
-    EmbeddingFunction,
-    GetResult,
-    QueryResult,
-    ID,
-    OneOrMany,
-    WhereDocument,
-    # maybe_cast_one_to_many_ids,
-    # maybe_cast_one_to_many_embedding,
-    # maybe_cast_one_to_many_metadata,
-    # maybe_cast_one_to_many_document,
-    # maybe_cast_one_to_many_image,
-    # maybe_cast_one_to_many_uri,
-    validate_ids,
-    validate_include,
-    validate_metadata,
-    validate_metadatas,
-    validate_where,
-    validate_where_document,
-    validate_n_results,
-    validate_embeddings,
-    validate_embedding_function,
-)
-
-# import sys
-# print("sys.path:---------------------------------------")
-# print(sys.path)
-# print("sys.path:---------------------------------------")
-
 
 class MyVanna(ChromaDB_VectorStore, OpenAI_Chat):
-# class MyVanna(ChromaDB_VectorStore, ZhipuAI_Chat):
+
 
     def __init__(self, config=None):
         ChromaDB_VectorStore.__init__(self, config=config)
-        # ZhipuAI_Chat.__init__(self, config=config)
         OpenAI_Chat.__init__(self, config=config)
 
-    # 根据question,sql,documentation,ddl获取training_data
     def get_single_training_data_custom(self, question: str | None, documentation: str | None, sql: str | None,
-                                        ddl: str | None, **kwargs) -> GetResult:
+                                        ddl: str | None, **kwargs):
         if sql is not None:
-            collection_get = self.sql_collection.get(where_document={"$contains": sql})
-            return collection_get
-        elif documentation is not None:
-            collection_get = self.documentation_collection.get(where_document={"$contains": documentation})
-            return collection_get
-        elif ddl is not None:
-            collection_get = self.ddl_collection.get(where_document={"$contains": ddl})
-            return collection_get
+            collection_get = self.sql_collection.get(where_document={"$contains": "select * from orders"})
 
 
+        collection_get = self.sql_collection.get(where_document={"$contains": "select * from orders"})
+        ids_ = collection_get["ids"]
+        print(ids_)
+        collection_get1 = self.sql_collection.get(where_document={"$contains": "rty"})
+        ids1 = collection_get1["ids"]
+        print(len(ids1))
+        # collection_query = self.sql_collection.query(query_texts=["select * from orders"],where={"sql": "select * from orders"})
+        sql_data = self.sql_collection.get()
+
+        # df = pd.DataFrame()
+        #
+        # if sql_data is not None:
+        #     # Extract the documents and ids
+        #     documents = [json.loads(doc) for doc in sql_data["documents"]]
+        #     ids = sql_data["ids"]
+        #
+        #     # Create a DataFrame
+        #     df_sql = pd.DataFrame(
+        #         {
+        #             "id": ids,
+        #             "question": [doc["question"] for doc in documents],
+        #             "content": [doc["sql"] for doc in documents],
+        #         }
+        #     )
+        #
+        #     df_sql["training_data_type"] = "sql"
+        #
+        #     df = pd.concat([df, df_sql])
+        #
+        # ddl_data = self.ddl_collection.get()
+        #
+        # if ddl_data is not None:
+        #     # Extract the documents and ids
+        #     documents = [doc for doc in ddl_data["documents"]]
+        #     ids = ddl_data["ids"]
+        #
+        #     # Create a DataFrame
+        #     df_ddl = pd.DataFrame(
+        #         {
+        #             "id": ids,
+        #             "question": [None for doc in documents],
+        #             "content": [doc for doc in documents],
+        #         }
+        #     )
+        #
+        #     df_ddl["training_data_type"] = "ddl"
+        #
+        #     df = pd.concat([df, df_ddl])
+        #
+        # doc_data = self.documentation_collection.get()
+        #
+        # if doc_data is not None:
+        #     # Extract the documents and ids
+        #     documents = [doc for doc in doc_data["documents"]]
+        #     ids = doc_data["ids"]
+        #
+        #     # Create a DataFrame
+        #     df_doc = pd.DataFrame(
+        #         {
+        #             "id": ids,
+        #             "question": [None for doc in documents],
+        #             "content": [doc for doc in documents],
+        #         }
+        #     )
+        #
+        #     df_doc["training_data_type"] = "documentation"
+        #
+        #     df = pd.concat([df, df_doc])
+        #
+        # return df

@@ -1,8 +1,10 @@
 path:
   cx_oracle: "E:\\Development\\PremiumSoft\\Navicat Premium 15\\instantclient_11_2"
+#  cx_oracle: "/usr/lib/oracle/12.2/client64/lib" #linux
 #数据库连接字符串
 db_str:
-  local: "mssql+pymssql://sa:123456@PC-202205240905:1433/Sportsoul-PDM"
+#  local: "mssql+pymssql://sa:123456@PC-202205240905:1433/Sportsoul-PDM"
+  local: "mssql+pymssql://sa:2660000532-83096695!@#$%@117.78.49.23:1604/SRC"
 #  local: "mssql+pymssql://sa:Sensnow2022@120.46.91.216:1433/ismartMemberService"
 #  local: "oracle://iqms:iqms@192.168.110.74:1521/IQORA"
 
@@ -13,11 +15,15 @@ ai:
 #    base-url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
 
     base-url: 'https://u192916-b442-a0bd23d2.westx.seetacloud.com:8443/ds/v1'
+#    base-url: 'https://ark.cn-beijing.volces.com/api/v3'
     chat:
 #      model: 'glm-4-air-0111 Preview'
 #      model: 'glm-4-plus'
-      model: deepseek-coder-v2:16b
+      model: qwen3:14b
+#      model: deepseek-v3-250324
+#      model: deepseek-coder-v2:16b
 #      model: deepseek-r1:14b
+#      model: ishumilin/deepseek-r1-coder-tools:8b
 #
 #      model: 'glm-4-airx'
 #      model: 'glm-4-air'
@@ -25,3 +31,33 @@ ai:
 
       options:
         temperature: 0.7
+  models:
+    deepseek-coder-v2:16b:
+      model: deepseek-coder-v2:16b
+      base-url: 'https://u192916-b442-a0bd23d2.westx.seetacloud.com:8443/ds/v1'
+      api_key: 'ollama'
+    deepseek-r1:14b:
+      model: deepseek-r1:14b
+      base-url: 'https://u192916-b442-a0bd23d2.westx.seetacloud.com:8443/ds/v1'
+      api_key: 'ollama'
+    phi4:latest:
+      model: phi4:latest
+      base-url: 'https://u192916-b442-a0bd23d2.westx.seetacloud.com:8443/ds/v1'
+      api_key: 'ollama'
+    qwen3:14b:
+      model: qwen3:14b
+      base-url: 'https://u192916-b442-a0bd23d2.westx.seetacloud.com:8443/ds/v1'
+      api_key: 'ollama'
+    glm-4-plus:
+      model: glm-4-plus
+      base-url: 'https://open.bigmodel.cn/api/paas/v4'
+      api_key: '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT'
+    glm-4-air-250414:
+      model: glm-4-air-250414
+      base-url: 'https://open.bigmodel.cn/api/paas/v4'
+      api_key: '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT'
+    deepseek-v3-250324:
+      model: deepseek-v3-250324
+      base-url: 'https://ark.cn-beijing.volces.com/api/v3'
+      api_key: 'ef849fd1-e273-45fb-87a8-1c91bb840c01'
+

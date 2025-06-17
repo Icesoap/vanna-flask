@@ -11,3 +11,5 @@ __pycache__
 */index_metadata.pickle
 /vector_data
 /output
+db
+logs

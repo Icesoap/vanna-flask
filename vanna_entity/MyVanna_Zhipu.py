@@ -199,7 +199,8 @@ class MyVanna_ZhipuAI(ChromaDB_VectorStore, ZhipuAI_Chat):
 
         if initial_prompt is None:
             initial_prompt = f"You are a {self.dialect} expert. " + \
-                             "Please help to generate a SQL query to answer the question. Your response should ONLY be based on the given context and follow the response guidelines and format instructions. "
+                             "Please help to generate a SQL query to answer the question. Only return a SQL." + \
+                              "Your response should ONLY be based on the given context and follow the response guidelines and format instructions. "
 
         initial_prompt = self.add_ddl_to_prompt(
             initial_prompt, ddl_list, max_tokens=self.max_tokens
@@ -237,7 +238,7 @@ class MyVanna_ZhipuAI(ChromaDB_VectorStore, ZhipuAI_Chat):
         return message_log
 
     def submit_prompt(
-            self, prompt, max_tokens=500, temperature=0.7, top_p=0.7, stop=None, **kwargs
+            self, prompt, max_tokens=32768, temperature=0.3, top_p=0.7, stop=None, **kwargs
     ):
         """
         重写大模型对话提交方法,解决大模型路径不对问题
@@ -410,6 +411,59 @@ class MyVanna_ZhipuAI(ChromaDB_VectorStore, ZhipuAI_Chat):
     #     except ValueError as e:
     #         logger.error("【MyVanna】is_sql_valid error:{}".format(e))
     #         return False
+
+    # 继承vanna\base\base.py
+    def extract_sql(self, llm_response: str) -> str:
+        """
+        原方法提取sql时有问题,这里修正
+
+        Example:
+        ```python
+        vn.extract_sql("Here's the SQL query in a code block: ```sql\nSELECT * FROM customers\n```")
+        ```
+
+        Extracts the SQL query from the LLM response. This is useful in case the LLM response contains other information besides the SQL query.
+        Override this function if your LLM responses need custom extraction logic.
+
+        Args:
+            llm_response (str): The LLM response.
+
+        Returns:
+            str: The extracted SQL query.
+        """
+        if '<think>' in llm_response:
+            llm_response = llm_response.split('</think>')[1]
+
+        # If the llm_response is not markdown formatted, extract last sql by finding select and ; in the response
+        sqls = re.findall(r"SELECT.*?;", llm_response, re.DOTALL | re.IGNORECASE)
+        if sqls:
+            sql = sqls[-1]
+            self.log(title="Extracted SQL", message=f"{sql}")
+            return sql
+
+        # If the llm_response contains a CTE (with clause), extract the last sql between WITH and ;
+        sqls = re.findall(r"\bWITH\.+b\bas\b .*?;", llm_response, re.DOTALL | re.IGNORECASE)
+        if sqls:
+            sql = sqls[-1]
+            self.log(title="Extracted SQL", message=f"{sql}")
+            return sql
+
+
+
+        # If the llm_response contains a markdown code block, with or without the sql tag, extract the last sql from it
+        sqls = re.findall(r"```sql\n(.*)```", llm_response, re.DOTALL)
+        if sqls:
+            sql = sqls[-1]
+            self.log(title="Extracted SQL", message=f"{sql}")
+            return sql
+
+        sqls = re.findall(r"```(.*)```", llm_response, re.DOTALL)
+        if sqls:
+            sql = sqls[-1]
+            self.log(title="Extracted SQL", message=f"{sql}")
+            return sql
+
+        return llm_response
 
 
 """

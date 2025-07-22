@@ -3,6 +3,8 @@ import json
 
 from flask import Flask, jsonify, Response, request, redirect, url_for
 import flask
+
+from dao.vector_db_dao import VectorDBDao
 from vanna_model.vanna_chromadb_openai import VannaChromaDBOpenai
 from sqlalchemy import create_engine
 from common.common_result import ApiResponse
@@ -60,15 +62,19 @@ def query_for_chart_html() -> jsonify:
 
         question = input_json['question'] if 'question' in input_json else None
         # ex:{"type":0,"uid":"IQMS","pwd":"iqms","server":"192.168.110.74","port":"1521","database":"IQORA"}
-        db_url = input_json['db_url'] if "db_url" in input_json else None
+        # db_url = input_json['db_url'] if "db_url" in input_json else None
+        db_id = input_json['db_id'] if "db_id" in input_json else None
         model_name = input_json['model_name'] if "model_name" in input_json else None
         # db_desc = input_json['db_desc'] if "db_desc" in input_json else None
         if question is None or len(question) <= 0:
             api_response.set_error("请输入要查询的问题")
             return jsonify(api_response.__dict__)
-        if db_url is None or len(db_url) <= 0:
-            api_response.set_error("请输入要链接的数据库链接字符串")
+        if db_id is None or len(db_id) <= 0:
+            api_response.set_error("请输入db_id")
             return jsonify(api_response.__dict__)
+        # if db_url is None or len(db_url) <= 0:
+        #     api_response.set_error("请输入要链接的数据库链接字符串")
+        #     return jsonify(api_response.__dict__)
         if model_name is None or len(model_name) <= 0:
             api_response.set_error("请输入大模型的名称")
             return jsonify(api_response.__dict__)
@@ -85,31 +91,33 @@ def query_for_chart_html() -> jsonify:
         # pwd = db_url_json['pwd']
 
         # db_url_json = json.loads(db_url)
-        db_type = db_url['type']
-        server = db_url['server']
-        port = db_url['port']
-        database = db_url['database']
-        uid = db_url['uid']
-        pwd = db_url['pwd']
 
-        if db_type is None:
-            api_response.set_error("请输入数据库类型")
-            return jsonify(api_response.__dict__)
-        if server is None or len(server) <= 0:
-            api_response.set_error("请输入数据库地址")
-            return jsonify(api_response.__dict__)
-        if port is None or len(port) <= 0:
-            api_response.set_error("请输入数据库端口号")
-            return jsonify(api_response.__dict__)
-        if database is None or len(database) <= 0:
-            api_response.set_error("请输入数据库名称")
-            return jsonify(api_response.__dict__)
-        if uid is None or len(uid) <= 0:
-            api_response.set_error("请输入数据库登录名")
-            return jsonify(api_response.__dict__)
-        if pwd is None or len(pwd) <= 0:
-            api_response.set_error("请输入数据库密码")
-            return jsonify(api_response.__dict__)
+
+        # db_type = db_url['type']
+        # server = db_url['server']
+        # port = db_url['port']
+        # database = db_url['database']
+        # uid = db_url['uid']
+        # pwd = db_url['pwd']
+        #
+        # if db_type is None:
+        #     api_response.set_error("请输入数据库类型")
+        #     return jsonify(api_response.__dict__)
+        # if server is None or len(server) <= 0:
+        #     api_response.set_error("请输入数据库地址")
+        #     return jsonify(api_response.__dict__)
+        # if port is None or len(port) <= 0:
+        #     api_response.set_error("请输入数据库端口号")
+        #     return jsonify(api_response.__dict__)
+        # if database is None or len(database) <= 0:
+        #     api_response.set_error("请输入数据库名称")
+        #     return jsonify(api_response.__dict__)
+        # if uid is None or len(uid) <= 0:
+        #     api_response.set_error("请输入数据库登录名")
+        #     return jsonify(api_response.__dict__)
+        # if pwd is None or len(pwd) <= 0:
+        #     api_response.set_error("请输入数据库密码")
+        #     return jsonify(api_response.__dict__)
 
         # 获取yaml文件路径
         yamlPath = 'config.yml'
@@ -145,10 +153,24 @@ def query_for_chart_html() -> jsonify:
         #                      , model=config_global['ai']['ollama']['chat']['model'], dialect=DB_DIALECT[db_type]
         #                      ,create_vector=False,db_type=db_type,db_name=database)
 
+        vector_db_dao = VectorDBDao()
+        vector_db_return = vector_db_dao.get_entity_by_id(db_id)
+        if not vector_db_return:
+            api_response.set_error(f"未找到ID为[{db_id}]的训练库")
+            return api_response.__dict__
+
+        db_type = vector_db_return.db_type
+        db_title = vector_db_return.db_title
+        uid = vector_db_return.uid
+        pwd = vector_db_return.pwd
+        server = vector_db_return.server
+        port = vector_db_return.port
+        database = vector_db_return.data_base
+
         vn = MyVanna_ZhipuAI(api_key=config_global['ai']['models'][model_name]['api_key']
                              , base_url=config_global['ai']['models'][model_name]['base-url']
                              , model=config_global['ai']['models'][model_name]['model'], dialect=DB_DIALECT[db_type]
-                             , create_vector=False, db_type=db_type, db_name=database)
+                             , create_vector=False, db_type=db_type, db_title=db_title)
         # config={'api_key': '6f0d34f959d88e4cd620b29bba666bd6.GW6udYqR8faOSIaT', 'dialect': DB_DIALECT[db_type],
         #         'model': config_global['ai']['ollama']['chat']['model'], 'base_url': config_global['ai']['ollama']['base-url']})
 
@@ -183,7 +205,8 @@ def query_for_chart_html() -> jsonify:
         # engine = create_engine('oracle://iqms:iqms@192.168.110.73:1521/IQORA')
 
         # 生成sql
-        sql = vn.generate_sql(question=question, db_type=db_type)
+        # sql = vn.generate_sql(question=question, db_type=db_type)
+        sql = vn.generate_sql(question=question, db_id=db_id)
         # 执行sql取数据
         df = vn.run_sql(sql=sql, db=engine)
         code = vn.generate_plotly_code(question=question, sql=sql, df_metadata=f"Running df.dtypes gives:\n {df.dtypes}")

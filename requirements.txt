@@ -3,3 +3,6 @@ vanna[chromadb,openai]
 db-dtypes
 python-dotenv
 cx_Oracle
+sqlalchemy
+#mysql-connector-python
+marshmallow-sqlalchemy

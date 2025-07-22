@@ -1,6 +1,7 @@
 # from vanna.openai.openai_chat import OpenAI_Chat
 from typing import List
 
+from dao.training_record_dao import TrainingRecordDao
 from vanna_model.openai.openai_chat_override import OpenAI_Chat
 from vanna.chromadb.chromadb_vector import ChromaDB_VectorStore
 from vanna.ZhipuAI import ZhipuAI_Chat
@@ -18,6 +19,9 @@ from entity.logging import logger
 from zhipuai import ZhipuAI
 
 from sentence_transformers import SentenceTransformer
+import os
+
+from entity.models import TrainingRecord
 
 # from chromadb.api.types import (
 #     URI,
@@ -69,18 +73,16 @@ from sentence_transformers import SentenceTransformer
 import chromadb
 from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 
-model = r'E:\Development\LLM\models\bge-m3'
+model = os.getenv("EMBEDDING_MODEL_PATH", r'/root/autodl-tmp/tools/llm/models/bge-m3')
+# model = r'E:\Development\LLM\models\bge-m3'
 # model = r'/root/autodl-tmp/tools/llm/models/bge-m3' #linux
 # model = r'E:\Development\LLM\models\m3e-base'
-#https://ask.csdn.net/questions/8107959
-
+# https://ask.csdn.net/questions/8107959
 
 
 # model = SentenceTransformer('moka-ai/m3e-base')
 # model = SentenceTransformer(model_name_or_path='E:\\Development\\ChatGLM\\langchain-chatglm2-custom-lib\\m3e-base')
 model = SentenceTransformer(model_name_or_path=model)
-
-
 
 
 # embeddings = model.encode("测试文本")
@@ -90,13 +92,11 @@ model = SentenceTransformer(model_name_or_path=model)
 # print(embeddings)
 
 
-#加入自定义embedding
+# 加入自定义embedding
 class MyEmbeddingFunction(EmbeddingFunction):
     def __call__(self, texts: Documents) -> Embeddings:
         embeddings_result = [model.encode(x) for x in texts]
         return embeddings_result
-
-
 
 
 # class MyVanna(ChromaDB_VectorStore, OpenAI_Chat):
@@ -104,42 +104,58 @@ class MyVanna_ZhipuAI(ChromaDB_VectorStore, ZhipuAI_Chat):
 
     # def __init__(self, config=None):
     def __init__(self, api_key: str = None, base_url: str = None, model: str = None, dialect: str = None, create_vector: bool = True,
-                 db_type: int = DEFAULT_DB_TYPE, db_name: str = None, **kwargs):
+                 db_type: int = DEFAULT_DB_TYPE, db_title: str = None, **kwargs):
+        """
+
+        :param api_key:
+        :param base_url:
+        :param model:
+        :param dialect:
+        :param create_vector:
+        :param db_type:
+        :param db_title: 向量库的名称,用来做唯一标识
+        :param kwargs:
+        """
 
         self.db_type = db_type
-        self.db_name = db_name
+        self.db_title = db_title
         self.base_url = base_url
         self.create_vector = create_vector
 
-        config = {'api_key': api_key, 'model': model, 'base_url': base_url, 'dialect': dialect, 'path': self.__init_vector_file_path(),
-                  "embedding_function": MyEmbeddingFunction()} #加入自定义embedding
+        config = {'api_key': api_key, 'model': model, 'base_url': base_url, 'dialect': dialect, 'path': self.__init_vector_file_path(self.db_title),
+                  "embedding_function": MyEmbeddingFunction()}  # 加入自定义embedding
 
         # 修改chromadb_vanna路径
         # TODO 分库（初始化）向量库
         # config['dialect'] = DB_DIALECT
+        # 初始化向量库,如果路径不存在，则创建,如果存在则使用,路径是path参数
         ChromaDB_VectorStore.__init__(self, config=config)
         ZhipuAI_Chat.__init__(self, config=config)
         # OpenAI_Chat.__init__(self, config=config)
 
-    """
-    初始化向量库-xb_yuq注释
-    """
+    def __init_vector_file_path(self, vector_db_name: str) -> str:
+        vector_db_path_prifix = os.getenv("VECTOR_DB_PATH_PRIFIX", "./db/vector_data")
+        db_path = f'{vector_db_path_prifix}/{vector_db_name}'
+        return db_path
 
-    def __init_vector_file_path(self):
-        if self.create_vector:
-            _time = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-            _db_name = self.db_name if self.db_name else "{}_{}".format(DB_TYPE_TITLE[self.db_type], _time)
-            vector_path_name = "{}/{}".format(DB_TYPE_TITLE[self.db_type], _db_name)
-            sqlite_server = SqliteService()
-            insert_sql = """INSERT INTO "main"."vector_database" ("db_type","name") VALUES ('{}','{}');""".format(
-                self.db_type, _db_name)
-            sqlite_server.cursor.execute(insert_sql)
-            sqlite_server.conn.commit()
-        else:
-            if not self.db_name:
-                raise ValueError("db_name is required")
-            vector_path_name = "{}/{}".format(DB_TYPE_TITLE[self.db_type], self.db_name)
-        return "./db/vector_data/{}".format(vector_path_name)
+    # def __init_vector_file_path(self):
+    #     """
+    #         初始化向量库-xb_yuq注释
+    #         """
+    #     if self.create_vector:
+    #         _time = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    #         _db_name = self.db_name if self.db_name else "{}_{}".format(DB_TYPE_TITLE[self.db_type], _time)
+    #         vector_path_name = "{}/{}".format(DB_TYPE_TITLE[self.db_type], _db_name)
+    #         sqlite_server = SqliteService()
+    #         insert_sql = """INSERT INTO "main"."vector_database" ("db_type","name") VALUES ('{}','{}');""".format(
+    #             self.db_type, _db_name)
+    #         sqlite_server.cursor.execute(insert_sql)
+    #         sqlite_server.conn.commit()
+    #     else:
+    #         if not self.db_title:
+    #             raise ValueError("db_name is required")
+    #         vector_path_name = "{}/{}".format(DB_TYPE_TITLE[self.db_type], self.db_title)
+    #     return "./db/vector_data/{}".format(vector_path_name)
 
     def run_sql(self, sql: str, db: Engine) -> pd.DataFrame:
         if len(sql) > 0:
@@ -200,7 +216,7 @@ class MyVanna_ZhipuAI(ChromaDB_VectorStore, ZhipuAI_Chat):
         if initial_prompt is None:
             initial_prompt = f"You are a {self.dialect} expert. " + \
                              "Please help to generate a SQL query to answer the question. Only return a SQL." + \
-                              "Your response should ONLY be based on the given context and follow the response guidelines and format instructions. "
+                             "Your response should ONLY be based on the given context and follow the response guidelines and format instructions. "
 
         initial_prompt = self.add_ddl_to_prompt(
             initial_prompt, ddl_list, max_tokens=self.max_tokens
@@ -448,8 +464,6 @@ class MyVanna_ZhipuAI(ChromaDB_VectorStore, ZhipuAI_Chat):
             self.log(title="Extracted SQL", message=f"{sql}")
             return sql
 
-
-
         # If the llm_response contains a markdown code block, with or without the sql tag, extract the last sql from it
         sqls = re.findall(r"```sql\n(.*)```", llm_response, re.DOTALL)
         if sqls:
@@ -464,6 +478,60 @@ class MyVanna_ZhipuAI(ChromaDB_VectorStore, ZhipuAI_Chat):
             return sql
 
         return llm_response
+
+
+def get_record_where_document(noun_list, contains=False, **kwargs):
+    """
+    匹配已维护训练数据
+    完全新增方法-yq经过多库改造
+    被 self.get_related_documentation方法调用
+    :param noun_list:
+    :param contains:
+    :param kwargs:
+    :return:
+    """
+    if not noun_list or len(noun_list) <= 0:
+        return {}
+
+    # db_type = kwargs.get("db_type")
+    # db_type_final = db_type if db_type else DEFAULT_DB_TYPE
+
+    db_id = kwargs.get("db_id")
+
+    bind_noun_list = [f"{noun_list[i]}%{noun_list[i + 1]}" for i in range(len(noun_list) - 1)] if len(
+        noun_list) > 1 else None
+
+    filters = []
+    loop_list = []
+    if bind_noun_list:
+        loop_list = bind_noun_list
+
+    else:
+        loop_list = noun_list
+
+    for i in loop_list:
+        filters.append(TrainingRecord.key.ilike(i))
+
+    logger.info("【MyVanna】get_record_where_document search_sql:{}".format(filters))
+
+    training_record_dao = TrainingRecordDao()
+    training_record_list = training_record_dao.query_entity_by_multi_condition(db_id, filters)
+    _document = None
+    if training_record_list:
+        _document = list(set(["是".join([entity.key, entity.value]) for entity in training_record_list]))
+
+    # if bind_sqlite_data:
+    #     _document = list(set(["是".join([i[0], i[1]]) for i in bind_sqlite_data]))
+    # else:
+    #     _document = list(set(["是".join([i[0], i[1]]) for i in sqlite_data]))
+
+    # _document = {k: v for k, v in sqlite_data if k in noun_list}
+    if not _document:
+        return {}
+    if len(_document) == 1:
+        return {"$contains": "{} ".format(_document[0])} if contains else [_document[0]]
+    where_document = {"$or": [{"$contains": "{} ".format(v)} for v in _document]} if contains else _document
+    return where_document
 
 
 """
@@ -538,7 +606,7 @@ def get_record_where_document(noun_list, contains=False, **kwargs):
 """
 
 
-def add_documentation(db_type, db_name, document_list, task_id):
+def add_documentation(db_type, db_title, document_list, task_id):
     """上传任务"""
     sqlite_server = SqliteService()
     insert_sql = """INSERT INTO "main"."upload_document" ("task_id", "state") VALUES ('{}', '{}');""".format(
@@ -547,9 +615,9 @@ def add_documentation(db_type, db_name, document_list, task_id):
     sqlite_server.cursor.execute(insert_sql)
     sqlite_server.conn.commit()
 
-    vn = MyVanna(
+    vn = MyVanna_ZhipuAI(
         db_type=db_type,
-        db_name=db_name,
+        db_title=db_title,
         create_vector=False,
     )
     success_doc_list = []
